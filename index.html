@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f5f7fb">
+  <title>ReviewCheck — Review Trust Analyzer</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17243b;
+      --muted: #718097;
+      --line: #e6ebf2;
+      --paper: #ffffff;
+      --canvas: #f5f7fb;
+      --blue: #4169e1;
+      --blue-dark: #3156c6;
+      --blue-pale: #eef2ff;
+      --green: #17845b;
+      --green-pale: #eaf7f0;
+      --amber: #bf7715;
+      --amber-pale: #fff5e6;
+      --red: #c64b48;
+      --red-pale: #fff0ef;
+      --shadow: 0 18px 55px rgba(27, 45, 80, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      background:
+        radial-gradient(ellipse at 50% -18%, rgba(91, 126, 238, 0.11), transparent 43%),
+        var(--canvas);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, textarea { font: inherit; }
+    button { -webkit-tap-highlight-color: transparent; }
+
+    .page-shell {
+      width: min(100% - 40px, 1040px);
+      margin: 0 auto;
+      padding: 34px 0 42px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 48px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 11px;
+      color: var(--ink);
+      font-size: 15px;
+      font-weight: 750;
+      letter-spacing: -0.035em;
+      text-decoration: none;
+    }
+
+    .brand-mark {
+      display: grid;
+      width: 35px;
+      height: 35px;
+      place-items: center;
+      border-radius: 11px;
+      background: var(--blue);
+      color: #fff;
+      box-shadow: 0 5px 12px rgba(65, 105, 225, 0.24);
+    }
+
+    .brand-mark svg { width: 19px; height: 19px; }
+
+    .privacy-note {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 550;
+    }
+
+    .privacy-note svg { width: 15px; height: 15px; color: var(--green); }
+
+    .intro {
+      max-width: 660px;
+      margin: 0 auto 30px;
+      text-align: center;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 14px;
+      color: var(--blue);
+      font-size: 11px;
+      font-weight: 750;
+      letter-spacing: 0.105em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(32px, 5vw, 46px);
+      line-height: 1.1;
+      letter-spacing: -0.055em;
+    }
+
+    .intro p {
+      margin: 14px auto 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.65;
+    }
+
+    .analyzer {
+      overflow: hidden;
+      border: 1px solid rgba(222, 229, 239, 0.9);
+      border-radius: 19px;
+      background: var(--paper);
+      box-shadow: var(--shadow);
+    }
+
+    .analyzer-main { padding: 30px 34px 27px; }
+
+    .field-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    label {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+    }
+
+    .field-hint, .char-count {
+      color: #8a96a9;
+      font-size: 12px;
+    }
+
+    .review-input {
+      display: block;
+      width: 100%;
+      min-height: 178px;
+      resize: vertical;
+      padding: 16px 17px;
+      border: 1px solid #dfe5ee;
+      border-radius: 11px;
+      outline: none;
+      background: #fcfdff;
+      color: var(--ink);
+      font-size: 14px;
+      line-height: 1.65;
+      transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease;
+    }
+
+    .review-input::placeholder { color: #a0aabb; }
+    .review-input:hover { border-color: #cbd4e2; }
+    .review-input:focus {
+      border-color: #7792ed;
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(65, 105, 225, 0.11);
+    }
+
+    .input-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 9px;
+    }
+
+    .samples {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .samples-label {
+      margin-right: 2px;
+      color: #8a96a9;
+      font-size: 11px;
+      font-weight: 650;
+    }
+
+    .sample-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 10px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+      color: #526179;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 650;
+      transition: border-color 150ms ease, background 150ms ease, color 150ms ease;
+    }
+
+    .sample-button:hover { border-color: #bdcafa; background: #f7f8ff; color: var(--blue-dark); }
+    .sample-button:focus-visible, .analyze-button:focus-visible {
+      outline: 3px solid rgba(65, 105, 225, 0.25);
+      outline-offset: 2px;
+    }
+    .sample-button svg { width: 13px; height: 13px; }
+
+    .analyzer-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+      padding: 18px 34px;
+      border-top: 1px solid #edf0f5;
+      background: #fcfdff;
+    }
+
+    .footer-hint {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .footer-hint svg { flex: 0 0 auto; width: 16px; height: 16px; color: #8392aa; }
+
+    .analyze-button {
+      display: inline-flex;
+      flex: 0 0 auto;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      min-height: 43px;
+      padding: 0 17px;
+      border: 0;
+      border-radius: 9px;
+      background: var(--blue);
+      color: #fff;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+      box-shadow: 0 5px 13px rgba(65, 105, 225, 0.2);
+      transition: background 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+    }
+
+    .analyze-button:hover { transform: translateY(-1px); background: var(--blue-dark); box-shadow: 0 7px 16px rgba(65, 105, 225, 0.25); }
+    .analyze-button:active { transform: translateY(0); }
+    .analyze-button svg { width: 16px; height: 16px; }
+
+    .results {
+      display: none;
+      margin-top: 20px;
+      border: 1px solid rgba(222, 229, 239, 0.9);
+      border-radius: 16px;
+      background: var(--paper);
+      box-shadow: 0 10px 35px rgba(27, 45, 80, 0.045);
+      animation: enter 220ms ease both;
+    }
+
+    .results.visible { display: block; }
+
+    @keyframes enter {
+      from { opacity: 0; transform: translateY(7px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .results-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      padding: 21px 25px 19px;
+      border-bottom: 1px solid #edf0f5;
+    }
+
+    .results-title {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 750;
+      letter-spacing: -0.02em;
+    }
+
+    .review-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 9px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .review-label::before { width: 6px; height: 6px; border-radius: 50%; background: currentColor; content: ""; }
+    .review-label.good { background: var(--green-pale); color: var(--green); }
+    .review-label.caution { background: var(--amber-pale); color: var(--amber); }
+    .review-label.poor { background: var(--red-pale); color: var(--red); }
+
+    .results-content {
+      display: grid;
+      grid-template-columns: minmax(210px, 0.85fr) minmax(0, 1.4fr);
+      gap: 28px;
+      padding: 25px;
+    }
+
+    .score-panel {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      padding: 18px;
+      border-radius: 12px;
+      background: #f8faff;
+    }
+
+    .score-ring {
+      --score: 100;
+      --score-color: var(--green);
+      position: relative;
+      display: grid;
+      flex: 0 0 auto;
+      width: 82px;
+      height: 82px;
+      place-items: center;
+      border-radius: 50%;
+      background: conic-gradient(var(--score-color) calc(var(--score) * 1%), #e7ecf4 0);
+      transition: background 450ms ease;
+    }
+
+    .score-ring::before {
+      position: absolute;
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      background: #f8faff;
+      content: "";
+    }
+
+    .score-number {
+      position: relative;
+      z-index: 1;
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.06em;
+    }
+
+    .score-copy strong {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 13px;
+    }
+
+    .score-copy span {
+      display: block;
+      max-width: 150px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .flags-heading {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 1px 0 12px;
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .flag-count {
+      display: inline-grid;
+      min-width: 19px;
+      height: 19px;
+      padding: 0 5px;
+      place-items: center;
+      border-radius: 6px;
+      background: #f0f3f8;
+      color: #68768b;
+      font-size: 10px;
+    }
+
+    .flag-list {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .flag-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      color: #526179;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .flag-icon {
+      display: grid;
+      flex: 0 0 auto;
+      width: 17px;
+      height: 17px;
+      margin-top: 1px;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--amber-pale);
+      color: var(--amber);
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    .flag-item.clean { color: var(--green); }
+    .flag-item.clean .flag-icon { background: var(--green-pale); color: var(--green); }
+
+    .disclaimer {
+      margin: 17px 0 0;
+      color: #8995a8;
+      font-size: 11px;
+      line-height: 1.55;
+      text-align: center;
+    }
+
+    @media (max-width: 650px) {
+      .page-shell { width: min(100% - 28px, 520px); padding-top: 21px; }
+      .topbar { margin-bottom: 37px; }
+      .privacy-note { font-size: 0; gap: 0; }
+      .privacy-note svg { width: 18px; height: 18px; }
+      .intro { margin-bottom: 23px; }
+      .intro p { font-size: 14px; }
+      .analyzer { border-radius: 15px; }
+      .analyzer-main { padding: 23px 20px 20px; }
+      .field-hint { display: none; }
+      .review-input { min-height: 165px; }
+      .input-meta { align-items: flex-start; gap: 8px; }
+      .samples { gap: 6px; }
+      .samples-label { flex-basis: 100%; }
+      .sample-button { padding: 7px 8px; font-size: 10px; }
+      .char-count { flex: 0 0 auto; margin-top: 2px; }
+      .analyzer-footer { align-items: stretch; flex-direction: column; padding: 16px 20px 19px; }
+      .analyze-button { width: 100%; }
+      .results-content { grid-template-columns: 1fr; gap: 21px; padding: 20px; }
+      .score-panel { padding: 15px; }
+      .score-copy span { max-width: none; }
+      .results-header { padding: 18px 20px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="ReviewCheck home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="m5 12.5 4.2 4.2L19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        ReviewCheck
+      </a>
+      <div class="privacy-note">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 3.5 19 6v5.3c0 4.2-2.8 7.6-7 9.2-4.2-1.6-7-5-7-9.2V6l7-2.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+          <path d="m9 12.1 2 2 4-4.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Your review stays on this device
+      </div>
+    </header>
+
+    <section class="intro" aria-labelledby="page-title">
+      <div class="eyebrow"><span aria-hidden="true"></span> E-commerce review analysis</div>
+      <h1 id="page-title">Can you trust this review?</h1>
+      <p>Spot common spam signals in seconds. Paste a customer review below to see its trust score and the patterns we found.</p>
+    </section>
+
+    <section class="analyzer" aria-label="Review analyzer">
+      <div class="analyzer-main">
+        <div class="field-heading">
+          <label for="review-text">Customer review</label>
+          <span class="field-hint">Paste or type the review you want to check</span>
+        </div>
+        <textarea
+          class="review-input"
+          id="review-text"
+          maxlength="5000"
+          placeholder="Example: I've been using this blender for a few weeks. It handles smoothies well and is easy to clean..."
+          aria-describedby="input-help char-count"
+        ></textarea>
+        <div class="input-meta">
+          <div class="samples" aria-label="Sample reviews">
+            <span class="samples-label" id="input-help">Try a sample:</span>
+            <button class="sample-button" id="genuine-sample" type="button">
+              <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m3.3 8.2 3 3L13 4.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Load Genuine Sample
+            </button>
+            <button class="sample-button" id="fake-sample" type="button">
+              <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 2.2 14 13H2L8 2.2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 6v3.2M8 11.2v.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              Load Fake/Spam Sample
+            </button>
+          </div>
+          <span class="char-count" id="char-count" aria-live="polite">0 / 5000</span>
+        </div>
+      </div>
+      <div class="analyzer-footer">
+        <div class="footer-hint">
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.5"/><path d="M10 9v4M10 6.3v.1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          Looks for language patterns often found in low-quality reviews.
+        </div>
+        <button class="analyze-button" id="analyze-button" type="button">
+          Analyze review
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 10h11M10 5l5 5-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </section>
+
+    <section class="results" id="results" aria-labelledby="results-title" aria-live="polite" aria-atomic="false">
+      <div class="results-header">
+        <h2 class="results-title" id="results-title">Analysis results</h2>
+        <span class="review-label good" id="review-label">Looks trustworthy</span>
+      </div>
+      <div class="results-content">
+        <div class="score-panel">
+          <div class="score-ring" id="score-ring" role="img" aria-label="Trust score: 100 percent">
+            <span class="score-number" id="score-number">100%</span>
+          </div>
+          <div class="score-copy">
+            <strong>Trust Score</strong>
+            <span id="score-description">No common spam signals detected.</span>
+          </div>
+        </div>
+        <div>
+          <h3 class="flags-heading">Red flags <span class="flag-count" id="flag-count">0</span></h3>
+          <ul class="flag-list" id="flag-list"></ul>
+        </div>
+      </div>
+    </section>
+
+    <p class="disclaimer">This tool checks for common text patterns only. A score is a helpful signal, not a guarantee of a review's authenticity.</p>
+  </main>
+
+  <script>
+    (() => {
+      const reviewInput = document.getElementById("review-text");
+      const charCount = document.getElementById("char-count");
+      const results = document.getElementById("results");
+      const scoreRing = document.getElementById("score-ring");
+      const scoreNumber = document.getElementById("score-number");
+      const scoreDescription = document.getElementById("score-description");
+      const reviewLabel = document.getElementById("review-label");
+      const flagCount = document.getElementById("flag-count");
+      const flagList = document.getElementById("flag-list");
+
+      const samples = {
+        genuine: "I bought this insulated water bottle for my commute about a month ago. It keeps water cold through most of the day, and the lid hasn't leaked in my backpack. The finish has a small scratch now, but overall it's been useful and easy to wash.",
+        fake: "AMAZING product!!! BEST deal ever!!! Buy now and click here for 100% guaranteed results!!! www.example.com — absolutely perfect, highly recommend!!!"
+      };
+
+      function analyzeReview(text) {
+        const flags = [];
+        const checks = [
+          { pattern: /buy\s+now/i, message: 'Promotional phrase detected: "buy now"', penalty: 20 },
+          { pattern: /click\s+here/i, message: 'Call-to-action phrase detected: "click here"', penalty: 20 },
+          { pattern: /100%/i, message: 'Absolute claim detected: "100%"', penalty: 15 },
+          { pattern: /guaranteed/i, message: 'Promotional claim detected: "guaranteed"', penalty: 15 },
+          { pattern: /www\./i, message: 'A web address is included ("www.")', penalty: 20 }
+        ];
+
+        for (const check of checks) {
+          if (check.pattern.test(text)) flags.push({ message: check.message, penalty: check.penalty });
+        }
+
+        const exclamationCount = (text.match(/!/g) || []).length;
+        if (exclamationCount >= 3) {
+          flags.push({
+            message: `Excessive exclamation marks (${exclamationCount} found)`,
+            penalty: Math.min(20, 10 + (exclamationCount - 3) * 2)
+          });
+        }
+
+        const capsWords = text.match(/\b[A-Z]{3,}\b/g) || [];
+        if (capsWords.length > 0) {
+          const uniqueWords = [...new Set(capsWords)];
+          flags.push({
+            message: `All-caps wording detected: ${uniqueWords.slice(0, 4).join(", ")}${uniqueWords.length > 4 ? ", …" : ""}`,
+            penalty: Math.min(20, 10 + (uniqueWords.length - 1) * 3)
+          });
+        }
+
+        const genericHype = /\b(amazing|awesome|best|perfect|excellent|fantastic|incredible|love it|highly recommend)\b/i.test(text);
+        if (text.trim().length <= 70 && genericHype) {
+          flags.push({ message: "Short, generic praise without specific product details", penalty: 15 });
+        }
+
+        const score = Math.max(0, 100 - flags.reduce((total, flag) => total + flag.penalty, 0));
+        return { flags, score };
+      }
+
+      function renderResults(text) {
+        const { flags, score } = analyzeReview(text);
+        const status = score >= 75
+          ? {
+            label: "Looks trustworthy",
+            className: "good",
+            color: "var(--green)",
+            description: flags.length === 0 ? "No common spam signals detected." : "Few common spam signals detected."
+          }
+          : score >= 45
+            ? { label: "Review with caution", className: "caution", color: "var(--amber)", description: "Some patterns may warrant a closer look." }
+            : { label: "Likely low quality", className: "poor", color: "var(--red)", description: "Several common spam signals detected." };
+
+        scoreNumber.textContent = `${score}%`;
+        scoreRing.style.setProperty("--score", score);
+        scoreRing.style.setProperty("--score-color", status.color);
+        scoreRing.setAttribute("aria-label", `Trust score: ${score} percent`);
+        scoreDescription.textContent = status.description;
+        reviewLabel.textContent = status.label;
+        reviewLabel.className = `review-label ${status.className}`;
+        flagCount.textContent = String(flags.length);
+        flagList.replaceChildren();
+
+        if (flags.length === 0) {
+          const item = document.createElement("li");
+          item.className = "flag-item clean";
+          item.innerHTML = '<span class="flag-icon" aria-hidden="true">✓</span><span>No common red flags found in this review.</span>';
+          flagList.append(item);
+        } else {
+          for (const flag of flags) {
+            const item = document.createElement("li");
+            item.className = "flag-item";
+            const icon = document.createElement("span");
+            icon.className = "flag-icon";
+            icon.setAttribute("aria-hidden", "true");
+            icon.textContent = "!";
+            const message = document.createElement("span");
+            message.textContent = flag.message;
+            item.append(icon, message);
+            flagList.append(item);
+          }
+        }
+
+        results.classList.add("visible");
+      }
+
+      function updateCharCount() {
+        charCount.textContent = `${reviewInput.value.length} / 5000`;
+      }
+
+      document.getElementById("genuine-sample").addEventListener("click", () => {
+        reviewInput.value = samples.genuine;
+        updateCharCount();
+        renderResults(reviewInput.value);
+        results.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      });
+
+      document.getElementById("fake-sample").addEventListener("click", () => {
+        reviewInput.value = samples.fake;
+        updateCharCount();
+        renderResults(reviewInput.value);
+        results.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      });
+
+      document.getElementById("analyze-button").addEventListener("click", () => {
+        const text = reviewInput.value.trim();
+        if (!text) {
+          reviewInput.focus();
+          return;
+        }
+        renderResults(text);
+        results.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      });
+
+      reviewInput.addEventListener("input", updateCharCount);
+      reviewInput.addEventListener("keydown", (event) => {
+        if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+          document.getElementById("analyze-button").click();
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
